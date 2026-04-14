@@ -1,0 +1,7 @@
+#Donot push these files to github
+env/
+__pycache__/
+*.pyc
+.env
+db.sqlite3
+*.log
