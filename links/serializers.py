@@ -34,8 +34,8 @@ class LinkSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(f'/{obj.active_code}/')
         return f'/{obj.active_code}/'
 
-    # def get_total_clicks(self, obj):
-    #     return obj.clicks.count()
+    def get_total_clicks(self, obj):
+        return obj.clicks.count()
 
     def validate_custom_alias(self, value):
         if value and Link.objects.filter(custom_alias=value).exists():

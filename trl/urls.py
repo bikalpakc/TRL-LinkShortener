@@ -17,10 +17,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from links.views import RedirectView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
     path('api/links/', include('links.urls')),
     path('api/analytics/', include('analytics.urls')),
 
+    # Catch-all redirect route
+    path('<str:short_code>/', RedirectView.as_view(), name='redirect'),
 ]
