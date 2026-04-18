@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Q
 
 from analytics.models import Click
+from analytics.tasks import record_click
 from .serializers import LinkSerializer
 from .models import Link
 
@@ -50,10 +51,10 @@ class RedirectView(View):
         if link.expires_at and link.expires_at < timezone.now():
             return HttpResponseForbidden("This link has expired")
 
-        # 3. Save the click (We will move this to Celery in the next step!)
-        # For now, we record it directly to make sure it works
-        Click.objects.create(
-            link=link,
+        # We call the Celery task using .delay() 
+        # This sends the data to Redis and continues IMMEDIATELY.
+        record_click.delay(
+            link_id=link.id,
             ip_address=request.META.get('REMOTE_ADDR'),
             browser=request.META.get('HTTP_USER_AGENT'),
             referrer=request.META.get('HTTP_REFERER')
