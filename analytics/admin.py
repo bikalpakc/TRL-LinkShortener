@@ -5,6 +5,6 @@ from .models import Click
 
 @admin.register(Click)
 class ClickAdmin(admin.ModelAdmin):
-    list_display = ('link', 'user', 'timestamp')
-    search_fields = ('link', 'user')
-    list_filter = ('timestamp',)
+    list_display = ('link', 'link__user', 'clicked_at')
+    search_fields = ('link__original_url',)
+    list_filter = ('clicked_at',)

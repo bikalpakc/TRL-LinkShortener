@@ -13,11 +13,15 @@ def generate_short_code():
 
 
 #Link model to store the original URL, the generated short code, and other relevant information.
+# user is nullable so anonymous visitors can shorten links without an account.
+# A logged-in user who shortens a link gets it assigned here (or it's claimed later).
 class Link(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='links'
+        related_name='links',
+        null=True,
+        blank=True
     )
     original_url = models.URLField(max_length=2000)
     short_code = models.CharField(max_length=20, unique=True, default=generate_short_code)

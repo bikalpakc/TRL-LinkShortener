@@ -5,7 +5,7 @@ from django.views import View
 from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Q
 
@@ -13,6 +13,45 @@ from analytics.models import Click
 from analytics.tasks import record_click
 from .serializers import LinkSerializer
 from .models import Link
+
+
+#Lets ANYONE (logged in or not) shorten a URL. Anonymous links get user=None
+# and can be claimed by an account later (see ClaimLinksView).
+class PublicShortenView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LinkSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            # If someone is logged in we tag the link to their account right away.
+            user = request.user if request.user.is_authenticated else None
+            serializer.save(user=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+#Claims anonymous links (user=None) to the currently logged-in account.
+#Called after a visitor logs in/signs up so the link they shortened on the
+#landing page shows up in their dashboard with full analytics.
+class ClaimLinksView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        short_codes = request.data.get('short_codes', [])
+        if not isinstance(short_codes, list) or not short_codes:
+            return Response({'claimed': 0}, status=status.HTTP_200_OK)
+
+        # Idempotent: only claims links that still have no owner; already-owned
+        # or unknown codes are simply ignored.
+        links = Link.objects.filter(
+            user__isnull=True,
+            is_active=True
+        ).filter(
+            Q(short_code__in=short_codes) | Q(custom_alias__in=short_codes)
+        )
+        claimed = links.count()
+        links.update(user=request.user)
+        return Response({'claimed': claimed}, status=status.HTTP_200_OK)
 
 
 #Auto Handles Post and Get Requests for creating and listing links.

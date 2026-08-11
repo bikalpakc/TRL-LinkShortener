@@ -166,6 +166,12 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
 }
 
+# Google OAuth (Sign in with Google).
+# This client ID MUST match the frontend's VITE_GOOGLE_CLIENT_ID and the
+# OAuth Client created in the Google Cloud Console. See the GoogleLoginView
+# in users/views.py for how the ID token is verified against it.
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+
 # Channels
 ASGI_APPLICATION = 'trl.asgi.application'
 REDIS_HOST = os.getenv('REDIS_HOST', 'redis.trl.local')
@@ -189,6 +195,9 @@ from kombu import Queue
 CELERY_TASK_QUEUES = (
     Queue('{default}', routing_key='{default}'),
 )
+# Make '{default}' the queue tasks are published to (matches what the worker consumes).
+CELERY_TASK_DEFAULT_QUEUE = '{default}'
+CELERY_TASK_DEFAULT_ROUTING_KEY = '{default}'
 
 # 4. Redis Cluster only supports Database 0. So, Ensure our URLs end in /0 and NOT /1 or /2.
 

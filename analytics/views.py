@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
+from django.db.models import Count
+from django.db.models.functions import TruncDate
 from analytics.models import Click
 from links.models import Link
 
@@ -40,11 +42,38 @@ class SummaryAnalyticsView(generics.GenericAPIView):
     def get(self, request, short_code):
         print("SummaryAnalyticsView called for short_code:", short_code)
         link = get_object_or_404(Link, short_code=short_code, user=request.user)
-        
+        clicks = link.clicks
+        total_clicks = clicks.count()
+
+        # Breakdown of clicks per country (drives the pie chart).
+        # Only countries that actually produced clicks appear here.
+        countries = [
+            {
+                'country': row['country'],
+                'count': row['count'],
+                'percentage': round(row['count'] / total_clicks * 100, 1) if total_clicks else 0,
+            }
+            for row in clicks.values('country')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        ]
+
+        # Clicks per day (drives the over-time graph).
+        clicks_over_time = [
+            {'date': row['date'], 'count': row['count']}
+            for row in clicks
+            .annotate(date=TruncDate('clicked_at'))
+            .values('date')
+            .annotate(count=Count('id'))
+            .order_by('date')
+        ]
+
         return Response({
             "short_code": link.short_code,
             "original_url": link.original_url,
-            "total_clicks": link.clicks.count(),
+            "total_clicks": total_clicks,
             "created_at": link.created_at,
-            "is_active": link.is_active
+            "is_active": link.is_active,
+            "countries": countries,
+            "clicks_over_time": clicks_over_time,
         })
